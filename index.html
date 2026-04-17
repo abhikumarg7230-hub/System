@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hostel Management System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #f5f5f5;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #2c3e50;
+    color: white;
+    padding: 15px;
+}
+
+.container {
+    display: flex;
+    padding: 20px;
+}
+
+.box {
+    flex: 1;
+    background: white;
+    margin: 10px;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+input, button {
+    padding: 10px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+.popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    background: white;
+    padding: 20px;
+    display: none;
+    border-radius: 10px;
+}
+
+/* Receipt */
+.receipt {
+    background: #fff;
+    padding: 20px;
+    margin-top: 15px;
+    border: 2px solid #000;
+    text-align: left;
+}
+
+.receipt h2 {
+    text-align: center;
+    border-bottom: 2px solid black;
+}
+
+.receipt-box {
+    border: 1px solid #000;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.receipt-table th, .receipt-table td {
+    border: 1px solid #000;
+    padding: 5px;
+    text-align: center;
+}
+
+/* Footer */
+.footer {
+    background: #2c3e50;
+    color: white;
+    margin-top: 20px;
+}
+
+.footer-container {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+    flex-wrap: wrap;
+}
+
+.footer-left, .footer-center, .footer-right {
+    flex: 1;
+    margin: 10px;
+}
+
+.footer h3 {
+    margin-bottom: 10px;
+}
+
+.social-icons span {
+    font-size: 20px;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.footer-bottom {
+    text-align: center;
+    padding: 10px;
+    background: #1a252f;
+    font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <img src="https://up.yimg.com/ib/th/id/OIP.Ex6YsHOIUaa4j1QRgKyLjwHaHa?pid=Api&rs=1&c=1&qlt=95&w=108&h=108" height="40">
+        <h3>Supaul College of Engineering</h3>
+    </div>
+
+    <div>
+        <button onclick="openLogin('warden')">Warden</button>
+        <button onclick="openLogin('faculty')">Faculty</button>
+    </div>
+</div>
+
+<!-- Student Panel -->
+<div class="container">
+    <div class="box">
+        <h2>Student Panel</h2>
+
+        <input type="text" id="studentCode" placeholder="Enter Unique Code">
+        <button onclick="studentSearch()">Check Details</button>
+
+        <div id="studentResult"></div>
+    </div>
+
+    <div class="box">
+        <img src="https://i.ytimg.com/vi/gZ39xZoT4Vg/hqdefault.jpg" style="width:100%; border-radius:10px;">
+    </div>
+</div>
+
+<!-- Login -->
+<div class="popup" id="loginBox">
+    <h3 id="loginTitle"></h3>
+    <input type="text" id="user" placeholder="Username"><br>
+    <input type="password" id="pass" placeholder="Password"><br>
+    <button onclick="login()">Login</button>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard" style="display:none; text-align:center;">
+    <h2>Upload Excel</h2>
+    <input type="file" id="file">
+</div>
+
+<script>
+let wardenData = [];
+let facultyData = [];
+let role = "";
+// Load saved data
+window.onload = function() {
+    let wardenSaved = localStorage.getItem("wardenData");
+    let facultySaved = localStorage.getItem("facultyData");
+
+    if(wardenSaved) wardenData = JSON.parse(wardenSaved);
+    if(facultySaved) facultyData = JSON.parse(facultySaved);
+};
+
+// Open login
+function openLogin(r) {
+    role = r;
+    document.getElementById("loginBox").style.display = "block";
+    document.getElementById("loginTitle").innerText = r + " Login";
+}
+
+// Login
+function login() {
+    let u = document.getElementById("user").value;
+    let p = document.getElementById("pass").value;
+
+    if((role==="warden" && u==="warden" && p==="1234") ||
+       (role==="faculty" && u==="faculty" && p==="1234")) {
+
+        alert("Login Successful");
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+    } else {
+        alert("Wrong login");
+    }
+}
+
+// Upload Excel
+document.getElementById("file").addEventListener("change", function(e){
+    let reader = new FileReader();
+    reader.readAsBinaryString(e.target.files[0]);
+
+    reader.onload = function(e){
+        let wb = XLSX.read(e.target.result, {type:'binary'});
+        let sheet = wb.Sheets[wb.SheetNames[0]];
+        let jsonData = XLSX.utils.sheet_to_json(sheet);
+
+        if(role === "warden") {
+            wardenData = jsonData;
+            localStorage.setItem("wardenData", JSON.stringify(wardenData));
+            alert("Warden Excel Uploaded");
+        } else if(role === "faculty") {
+            facultyData = jsonData;
+            localStorage.setItem("facultyData", JSON.stringify(facultyData));
+            alert("Faculty Excel Uploaded");
+        }
+
+        document.getElementById("dashboard").style.display = "none";
+    }
+});
+
+// Student Search (FIXED)
+function studentSearch() {
+    let id = document.getElementById("studentCode").value.trim();
+
+   if(wardenData.length === 0 && facultyData.length === 0) {
+        document.getElementById("studentResult").innerHTML = "⚠️ Upload data first";
+        return;
+    }
+
+    let res = null;
+
+// Warden data check
+res = wardenData.find(x => String(x.UniqueCode).trim() === id);
+
+// Faculty data check
+if(!res) {
+    res = facultyData.find(x => String(x.UniqueCode).trim() === id);
+}
+    if(res) {
+
+        let html = `
+        <div class="receipt" id="receiptBox">
+
+            <h2 style="text-align:center;">Supaul College of Engineering</h2>
+            <h3 style="text-align:center;">Student Receipt</h3>
+
+            <div class="receipt-box">
+                <p><b>Receipt No:</b> ${res.UniqueCode}</p>
+                <p><b>Date:</b> ${new Date().toLocaleDateString()}</p>
+            </div>
+
+            <table class="receipt-table">
+                <tr>
+                    <th>Field</th>
+                    <th>Details</th>
+                </tr>
+        `;
+
+        // 🔥 ALL DATA SHOW (dynamic)
+        Object.keys(res).forEach(key => {
+            html += `
+            <tr>
+                <td><b>${key}</b></td>
+                <td>${res[key]}</td>
+            </tr>
+            `;
+        });
+
+        html += `
+            </table>
+
+            <p style="margin-top:20px;">Signature: __________</p>
+
+        </div>
+
+        <button onclick="downloadPDF()">📄 Download PDF</button>
+        <button onclick="printReceipt()">🖨️ Print</button>
+        `;
+
+        document.getElementById("studentResult").innerHTML = html;
+
+    } else {
+        document.getElementById("studentResult").innerHTML = "❌ Unique Code Not Found";
+    }
+}
+// PDF
+function downloadPDF() {
+    let element = document.getElementById("receiptBox");
+    html2pdf().from(element).save("receipt.pdf");
+}
+
+// Print
+function printReceipt() {
+    let content = document.getElementById("receiptBox").innerHTML;
+    let win = window.open('', '', 'width=800,height=600');
+    win.document.write(content);
+    win.print();
+}
+
+</script>
+
+<footer class="footer">
+    <div class="footer-container">
+
+        <div class="footer-left">
+            <h3>Supaul College of Engineering</h3>
+            <p> Management System</p>
+        </div>
+
+        <div class="footer-center">
+            <p>📍 Supaul, Bihar, India</p>
+            <p>📞 +91 9876543210</p>
+            <p>📧 sce@gmail.com</p>
+        </div>
+
+        <div class="footer-right">
+            <p>Follow Us</p>
+            <div class="social-icons">
+                <span>🌐</span>
+                <span>📘</span>
+                <span>📷</span>
+                <span>▶️</span>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer-bottom">
+        © 2026 Supaul College of Engineering | Developed by Abhishek Kumar
+    </div>
+</footer>
+
+</body>
+</html>
